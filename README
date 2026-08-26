@@ -1,1 +1,7 @@
 This repo contain all the config files needed to train and run inference on the Flo model.
+
+Preprint paper: https://arxiv.org/abs/2601.02090
+
+Anemoi dataets: https://github.com/ecmwf/anemoi-datasets
+
+Anemoi core: https://github.com/ecmwf/anemoi-core
