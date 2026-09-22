@@ -212,3 +212,9 @@ __marimo__/
 # pixi environments
 .pixi/*
 !.pixi/config.toml
+training_data_surge_*/
+data_set_match/surge_atm_zarr_data/
+data_set_match/surge_atm_zarr_data_second_time/
+data_set_match/anemoi_logs/
+data_set_match/cdo_check_logs/
+data_set_match/tmp/

@@ -1,0 +1,42 @@
+dates:
+  start: '1997-01-01T00:00:00'
+  end: '1997-12-31T23:00:00'
+  frequency: 1h
+
+build:
+  group_by: 100
+
+input:
+  pipe:
+    - join:
+
+        # Wind - U component
+        - netcdf:
+            path: /home/osw001/data/ppp7/surge_anemoi_project/anemoi-stormsurge/combined_1993_2025/training_data_surge_UU/UU_y1997.nc
+            param: [u10]
+
+        # Wind - V component
+        - netcdf:
+            path: /home/osw001/data/ppp7/surge_anemoi_project/anemoi-stormsurge/combined_1993_2025/training_data_surge_VV/VV_y1997.nc
+            param: [v10]
+
+        # Mean sea-level pressure (Pa)
+        - netcdf:
+            path: /home/osw001/data/ppp7/surge_anemoi_project/anemoi-stormsurge/combined_1993_2025/training_data_surge_PN/PN_y1997.nc
+            param: [msl]
+
+        - forcings:
+            template: ${input.pipe.0.join.0.netcdf}
+            param:
+            - cos_latitude
+            - cos_longitude
+            - sin_latitude
+            - sin_longitude
+            - cos_julian_day
+            - cos_local_time
+            - sin_julian_day
+            - sin_local_time
+            - insolation
+            #- bathymetry
+
+    #- remove_nans: {}
