@@ -1,6 +1,6 @@
 [project]
 authors = [{name = "Nils Kristensen", email = ""}]
-dependencies = ["anemoi-training", "anemoi-models", "anemoi-graphs", "anemoi-datasets"]
+dependencies = ["anemoi-training>=0.13.0,<0.14", "anemoi-models>=0.19.0,<0.20", "anemoi-graphs>=0.9.7,<0.10", "anemoi-datasets>=0.5.34,<0.6"]
 name = "anemoi-stormsurge"
 requires-python = ">= 3.11"
 version = "0.1.0"
@@ -21,10 +21,20 @@ platforms = ["linux-64"]
 anemoi_stormsurge = { path = ".", editable = true }
 
 [tool.pixi.tasks]
-interp_ssh_orc12_toera5="ord_soumet training-data/scripts/launch_pyscript.sh -cpus 200 -cm 500G -mach ppp8 -t 21600 -jn interpolate-ssh.py -args $(pwd) training-data/scripts/interpolate-ssh.py"
+interp_ssh_orc12_toera5='''
+ord_soumet training-data/scripts/launch_pyscript.sh -cpus 256 -cm 690G \
+                                                    -mach moira -t 10800 -jn interpolate-ssh.py \
+                                                    -args ${PIXI_PROJECT_ROOT} training-data/scripts/interpolate-ssh.py
+'''
 
 
+[tool.pixi.activation.env]
+LD_LIBRARY_PATH = "${PIXI_PROJECT_ROOT}/.pixi/envs/default/lib"
 
 [tool.pixi.dependencies]
 aether = ">=2026.9.1,<2027"
 ipython = ">=9.17.1,<10"
+scipy = ">=1.18.1,<2"
+libstdcxx-ng = ">=16.2.0,<17"
+trimesh = ">=5.1.0,<6"
+fasteners = ">=0.20,<0.21"
