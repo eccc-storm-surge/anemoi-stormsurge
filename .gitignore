@@ -212,3 +212,6 @@ __marimo__/
 # pixi environments
 .pixi/*
 !.pixi/config.toml
+
+
+training-data/gdsps-hindcast
