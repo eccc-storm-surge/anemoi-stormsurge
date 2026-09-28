@@ -218,3 +218,4 @@ data_set_match/surge_atm_zarr_data_second_time/
 data_set_match/anemoi_logs/
 data_set_match/cdo_check_logs/
 data_set_match/tmp/
+/data_set_match/surge_atm_zarr_data_second_time/surge_atm_2nd*.zarr/
