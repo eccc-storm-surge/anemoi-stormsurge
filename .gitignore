@@ -219,3 +219,9 @@ data_set_match/anemoi_logs/
 data_set_match/cdo_check_logs/
 data_set_match/tmp/
 /data_set_match/surge_atm_zarr_data_second_time/surge_atm_2nd*.zarr/
+/data_set_match/PN_y2023_cleaned.nc
+/data_set_match/PN_y2024_64test.nc
+/data_set_match/PN_y2024_cleaned.nc
+/data_set_match/configs/surge_atm_config_2nd[0-9][0-9][0-9][0-9].yaml
+/data_set_match/configs/surge_ssh_config_[0-9][0-9][0-9][0-9].yaml
+/data_set_match/ssh_zarr_data/
