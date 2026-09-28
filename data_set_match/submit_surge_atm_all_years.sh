@@ -15,7 +15,7 @@ CONFIG_DIR=${WORKDIR}/configs
 ZARR_DIR=${WORKDIR}/surge_atm_zarr_data_second_time
 LOGDIR=${WORKDIR}/anemoi_logs
 
-START_YEAR=2023
+START_YEAR=2025
 END_YEAR=2025
 
 mkdir -p ${CONFIG_DIR}

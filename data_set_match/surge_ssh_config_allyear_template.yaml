@@ -1,0 +1,26 @@
+dates:
+  start: 'YEAR_START-01-01T01:00:00'
+  end: 'NEXT_YEAR-01-01T00:00:00'
+  frequency: 1h
+  missing: []
+
+build:
+  group_by: 100
+
+statistics:
+  allow_nans:
+  - sossheig
+
+input:
+  netcdf:
+    path: /home/olh001/Python/anemoi-stormsurge/training-data/gdsps-hindcast/era5-grid/netcdf/SSH_yYEAR_START.nc
+    param: [sossheig]
+    # lat/lon are 2D curvilinear coords without standard_name/units, so CF auto-detection fails; force the mapping.
+    flavour:
+      rules:
+        latitude:
+          name: lat
+        longitude:
+          name: lon
+        time:
+          name: time_counter
