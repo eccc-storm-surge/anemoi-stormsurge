@@ -1,0 +1,229 @@
+defaults:
+- data: zarr
+- dataloader: native_grid
+- diagnostics: evaluation # Current preset supplies logging/checkpoint defaults in place of the old custom block.
+- system: example # Current Anemoi config group; PBS hardware and dataset paths are overridden below.
+- graph: existing # Load the prebuilt global graph instead of generating the old limited-area graph.
+- model: graphtransformer
+- task: forecaster # Explicit forecast task required by the current Anemoi config schema.
+- training: single # Global training preset; lam uses LAM-specific scalers and inside-LAM validation metrics.
+- override hydra/hydra_logging: disabled
+- override hydra/job_logging: disabled
+- _self_
+
+config_validation: False
+
+hydra:  
+  output_subdir: null  
+  run:  
+    dir: .
+
+data:
+  datasets:
+    data:
+      # Atmospheric inputs are forcings; sossheig is the forecast state variable.
+      forcing:
+      - u10
+      - v10
+      - msl
+      - cos_julian_day
+      - cos_latitude
+      - cos_local_time
+      - cos_longitude
+      - insolation
+      - sin_julian_day
+      - sin_latitude
+      - sin_local_time
+      - sin_longitude
+      diagnostic: []
+      processors:
+        imputer:
+          _target_: anemoi.models.preprocessing.imputer.ConstantImputer
+          _convert_: all
+          config:
+            default: "none"
+            # Keep model inputs finite at land points; the loss mask excludes those targets.
+            0:
+            - sossheig
+        normalizer:
+          _target_: anemoi.models.preprocessing.normalizer.InputNormalizer
+          config:
+            # Physical fields use mean/std; cyclic coordinates and insolation remain unscaled.
+            default: "mean-std"
+            std: []
+            min-max: []
+            max: []
+            none:
+            - cos_julian_day
+            - cos_latitude
+            - cos_local_time
+            - cos_longitude
+            - insolation
+            - sin_julian_day
+            - sin_latitude
+            - sin_local_time
+            - sin_longitude
+  frequency: 1h
+  timestep: 1h
+
+task:
+  # Override forecaster defaults (2 inputs @ 6h stride) to match hourly data: single lagged input t-1 predicts t.
+  multistep_input: 1
+  timestep: 1h
+
+dataloader:
+  num_workers:
+    training: 2
+    validation: 2
+    test: 2
+  batch_size: 
+    training: 4 # has to be 1 for model-paralell
+    validation: 4
+    test: 4
+
+  limit_batches:
+    training: null
+    validation: null
+    test: null # No cap: evaluate the complete 10-year test period.
+  
+  dataset: ${system.input.dataset}
+  model_run_info: null
+  # Direct global join replaces the old LAM cutout/trim_edge dataset wrapper.
+  # End dates are exclusive: 18 train years, 4 validation years, then 10 test years; 2025 is reserved.
+  training:
+    datasets:
+      data:
+        dataset_config:
+          dataset: ${dataloader.dataset}
+          frequency: ${data.frequency}
+          drop: []
+        start: 1993-01-01
+        end: 2011-01-01
+        trajectory: ${dataloader.model_run_info}
+  validation:
+    datasets:
+      data:
+        dataset_config:
+          dataset: ${dataloader.dataset}
+          frequency: ${data.frequency}
+          drop: []
+        start: 2011-01-01
+        end: 2015-01-01
+        trajectory: ${dataloader.model_run_info}
+  test:
+    datasets:
+      data:
+        dataset_config:
+          dataset: ${dataloader.dataset}
+          frequency: ${data.frequency}
+          drop: []
+        start: 2015-01-01
+        end: 2025-01-01
+        trajectory: ${dataloader.model_run_info}
+  grid_indices:
+    _target_: anemoi.training.data.grid_indices.MaskedGrid
+    nodes_name: data
+    node_attribute_name: indices_connected_nodes # Use the connectivity mask stored in the prebuilt graph.
+
+diagnostics:
+  plot: 
+    parameters:
+    - sossheig # Plot the SSH forecast target; the inherited defaults are unrelated atmospheric fields.
+    callbacks: []
+  log:
+    mlflow:
+      enabled: True
+      offline: False
+      authentication: False # Offline logging does not require MLflow credentials.
+      tracking_uri: http://azathoth2.science.gc.ca:5000
+      experiment_name: 'Surge_ssh_NaN_as_0'
+      run_name: 'acc_batch_size_100' #change this
+    wandb: 
+      entity: null
+
+system:
+  # PBS allocation is one node with one GPU; no more slurm.
+  hardware:
+    accelerator: gpu
+    num_gpus_per_node: 1
+    num_nodes: 1
+    num_gpus_per_model: 1
+  input:
+    # Join aligned SSH target data with atmospheric forcings at hourly frequency.
+    dataset:
+      join:
+      - dataset: /home/osw001/data/ppp7/surge_anemoi_project/anemoi-stormsurge/training-data/combined_anemoi_zarr/SSH_1993-2025_anemoi.zarr
+        frequency: ${data.frequency}
+      - dataset: /home/osw001/data/ppp7/surge_anemoi_project/anemoi-stormsurge/training-data/combined_anemoi_zarr/surge_atm_1993-2025_anemoi.zarr
+        frequency: ${data.frequency}
+      adjust: ["start", "end"]
+    graph: /home/osw001/data/ppp7/surge_anemoi_project/anemoi-stormsurge/graph/graph_anemoi_ocean_weighted.pt
+    warm_start: null
+  output:
+    # Keep this experiment's checkpoints and logs separate from prior runs.
+    root: /home/osw001/data/ppp7/surge_anemoi_project/anemoi-stormsurge/train/output/ssh_atmos_global_1993-2024_more_epoches
+
+model: 
+  node_trainable_parameters:
+    data: 0
+    hidden: 0
+  encoders:
+    data:
+      source_datasets: [data]
+      dataset_fusing_strategy: not_supported
+      mapper: ${model.encoder}
+  decoders:
+    data:
+      target_datasets: [data]
+      target_node_features: [encoded_data]
+      mapper: ${model.decoder}
+  latent_aggregator:
+    _target_: anemoi.models.layers.aggregator.SumAggregator
+  processor:
+    num_channels: ${model.num_channels}
+  encoder:
+    num_channels: ${model.num_channels}
+  decoder:
+    num_channels: ${model.num_channels}
+    sub_graph_edge_attributes: [edge_length, edge_dirs]
+  num_channels: 256 #1024 #TODO: this number dont have to be so large when have few vars, use higher nr when have more layers vars. Test to see if higher than 256 gives added value. Or higher when have less mesh points (remove land)
+  trainable_parameters:
+    data: 0
+    hidden: 0
+    data2hidden: 0
+    hidden2data: 0
+    hidden2hidden: 0 # GNN and GraphTransformer Processor only
+  bounding: #These are applied in order
+    - _target_: anemoi.models.layers.bounding.ReluBounding
+      variables: [] #[salinity_0]
+  # No cutout_mask output mask: this is a global graph, not the old LAM graph.
+training:
+  accum_grad_batches: 100
+  # MSE is the optimization objective; node weights and hourly time-step weights are included.
+  training_loss:
+    datasets:
+      data:
+        _target_: anemoi.training.losses.MSELoss
+        scalers: ['general_variable', 'nan_mask_weights', 'node_weights', 'time_steps'] # Ignore originally missing land SSH values.
+        ignore_nans: False
+  validation_metrics:
+    # ignore_nans excludes original land NaNs in post-processed validation targets.
+    datasets:
+      data:
+        mse:
+          _target_: anemoi.training.losses.MSELoss
+          scalers: ['node_weights', 'time_steps']
+          ignore_nans: True
+  precision: bf16-mixed
+  metrics:
+    datasets:
+      data: [sossheig] # Request reported training/validation metrics for the only predicted variable (SSH).
+  # Null run identifiers replace the inherited fork ID and start a fresh experiment.
+  run_id: null
+  fork_run_id: null
+  transfer_learning: False
+  load_weights_only: False
+  max_epochs: 50
+  max_steps: 1e5 #????
+  optimization:
+    lr: 6.25e-4
