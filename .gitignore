@@ -226,3 +226,7 @@ data_set_match/tmp/
 /data_set_match/configs/surge_ssh_config_[0-9][0-9][0-9][0-9].yaml
 /data_set_match/ssh_zarr_data/
 /data_set_match/surge_atm_2023_offset64test.zarr/
+# data_set_match: generated data and per-year configs
+data_set_match/*.zarr/
+data_set_match/etas_ssht_zarr_data/
+data_set_match/configs/etas_ssht_config_[0-9][0-9][0-9][0-9].yaml

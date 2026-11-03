@@ -1,0 +1,29 @@
+description: Bathymetry and mask from the ERA5 grid
+dates:
+  start: 1993-01-01T00:00:00
+  end: 2024-12-31T23:00:00
+  frequency: 1h
+
+statistics:
+  allow_nans: [Bathymetry]
+
+input:
+  repeated-dates:
+    mode: constant
+    date: 1993-01-01T01:00:00
+    source:
+      netcdf:
+        path: /home/olh001/Python/anemoi-stormsurge/training-data/gdsps-hindcast/era5-grid/bathymetry_and_mask_era5_grid.nc
+        param: [Bathymetry, tmask]
+        flavour:
+          rules:
+            latitude:
+              name: lat
+            longitude:
+              name: lon
+            time:
+              name: time_counter
+
+output:
+  layout: gridded
+  dtype: float32
